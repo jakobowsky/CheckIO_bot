@@ -1,0 +1,29 @@
+Brainstorm for CheckIO Bot:
+Goal:
+-> Level up the account. (ok so we have to somehow solve tasks)
+
+How to do it:
+-> Check for existing solutions in google: f"Python checkIO {TASK NAME}"
+
+
+LOGIC:
+1. Open browser, login and go to main checkIO page.
+2. Get info about all Islands HREFs (links)
+3. Go on the link from the X island.
+4. Get all info about all tasks from current island (Titles, links, and If_solved)
+5. Go to the link of task + find a solution of task + validate url and copy solution (also validate).
+6. Go to task url + /solve/ + Paste solution
+7. Click check:
+    7.0 Remember links with solution and check if we visited more than 5
+    7.1 TASK SOLVED . NICE, move on to next task ... (repeat algorithm)
+    7.2 TASK NOT SOLVED. => Go to point 5. (if not solved after 5 tries then skip the task)
+
+8. If all tasks are solved from island or if task is not solved:
+    8.1 GO TO point 2.
+
+HINTS:
+-> crete new account with email with some random password :)
+-> use selenium for operations on the browser (instead of requests)
+-> get familliar with Github and GIT ( git clone / git add . /git commit -m 'commit name' / git push) + set up ssh for github
+-> learn about .gitignore and storing password in some file, for example .keys.json
+-> please use time.sleep(5)
