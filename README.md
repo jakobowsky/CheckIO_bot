@@ -7,5 +7,5 @@ pip3 install -r requirements.txt
 
 ### RUN SCRIPT
 ```buildoutcfg
-python3 check.py
+python3 checkio.py
 ```
