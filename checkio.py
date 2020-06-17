@@ -1,10 +1,11 @@
 import json
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import time
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
+from selenium.webdriver.common.keys import Keys
 
 def read_credentials():
     secrets = 'secrets.json'
@@ -22,18 +23,75 @@ class CheckIOSolver:
         self.login = login
         self.password = password
         self.google = "https://www.google.com/"
-        self.base_url = "https://checkio.org/"
+        self.base_url = "https://checkio.org"
+        self.SEARCH_TEXT = "Python checkIO "
         self.driver = webdriver.Chrome(ChromeDriverManager().install())
+
 
     def main_logic(self):
         self.login_to_checkio()
         # links = self.get_islands_links()
-        self.get_unsolved_tasks_from_island('https://py.checkio.org/station/home/')
+        unsolved_island_tasks = self.get_unsolved_tasks_from_island('https://py.checkio.org/station/home/')
+        self.solve_tasks_on_island(unsolved_island_tasks)
         time.sleep(3)
         self.driver.quit()
 
-    def solve_tasks_on_island(self, link_to_island):
-        pass
+    def solve_tasks_on_island(self, tasks_to_solve):
+        for task in tasks_to_solve[:1]:
+            self.solve_one_task(task)
+
+    def solve_one_task(self, task):
+        print(task)
+        solution_links = self.get_google_solutions_for_task(task)
+        for solution in solution_links:
+            solution_code = self.copy_solution(solution)
+            self.solve_and_check_task(solution_code, task)
+
+    def solve_and_check_task(self, solution_code, task_obj):
+
+        self.driver.get(f'{self.base_url}/{task_obj.link}')
+        time.sleep(2)
+        print("Click on Solve It button")
+        try:
+            self.driver.find_element_by_xpath("//a[@class='btn']").click()
+        except ElementClickInterceptedException:
+            print("--- Pop up Appeared ----")
+            self.driver.find_element_by_xpath("//div[@class='congratulation__body__accept']").click()
+            print("--- Closed Popup ---")
+            time.sleep(2)
+            self.driver.find_element_by_xpath("//a[@class='btn']").click()
+        time.sleep(2)
+        solution_textarea_element = self.driver.find_element_by_xpath("//textarea")
+        solution_textarea_element.send_keys(Keys.COMMAND + "a")
+        solution_textarea_element.send_keys(Keys.DELETE)
+        solution_textarea_element.send_keys(solution_code)
+        print('debug')
+
+
+
+    def copy_solution(self, solution_link):
+        self.driver.get(solution_link)
+        time.sleep(2)
+        solution_code = self.driver.find_element_by_xpath("//div[@class='publications__info__code']")
+        return solution_code.text
+
+
+    def get_google_solutions_for_task(self, task):
+        print("Google Search: Task - " + task.name + "\n")
+        self.driver.get(self.google)
+        time.sleep(2)
+        searchbox = self.driver.find_element_by_name("q")
+        searchbox.send_keys(self.SEARCH_TEXT + task.name)
+        time.sleep(1)
+        searchbox.submit()
+        time.sleep(2)
+        google_results = self.driver.find_elements_by_xpath("//div[@class='r']/a[contains(@href,'publications')]")
+        current_google_result_links = []
+        for results in google_results:
+            current_google_result_links.append(results.get_attribute("href"))
+        time.sleep(3)
+        return current_google_result_links
+
 
     def get_unsolved_tasks_from_island(self, link_to_island):
         self.driver.get(link_to_island)
@@ -41,12 +99,15 @@ class CheckIOSolver:
         tasks = soup.find_all(class_='island-tasks__container')
         unsolved_tasks = []
         for task in tasks:
-            task_status = task.find(class_='island-tasks__side__sign').get('title')
-            if task_status != 'Solved':
-                title = task.find(class_='island-tasks__task__title').get('title')
-                link = task.find('a').get('href')
-                unsolved_tasks.append(Task(title, link))
-        print(unsolved_tasks)
+            try:
+                task_status = task.find(class_='island-tasks__side__sign').get('title')
+                if task_status != 'Solved':
+                    title = task.find(class_='island-tasks__task__title').get('title')
+                    link = task.find('a').get('href')
+                    unsolved_tasks.append(Task(title, link))
+            except Exception as e:
+                print(e)
+        return unsolved_tasks
 
 
     def get_islands_links(self):
