@@ -5,6 +5,7 @@ colorama==0.4.3
 configparser==5.0.0
 crayons==0.3.0
 idna==2.9
+pyperclip==1.8.0
 requests==2.23.0
 selenium==3.141.0
 soupsieve==2.0.1
