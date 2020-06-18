@@ -2,10 +2,13 @@ import json
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.webdriver.common.action_chains import ActionChains
 import time
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
+import pyperclip
 from selenium.webdriver.common.keys import Keys
+
 
 def read_credentials():
     secrets = 'secrets.json'
@@ -13,10 +16,12 @@ def read_credentials():
         keys = json.loads(f.read())
         return keys
 
+
 @dataclass
 class Task:
     name: str
     link: str
+
 
 class CheckIOSolver:
     def __init__(self, login, password):
@@ -26,7 +31,6 @@ class CheckIOSolver:
         self.base_url = "https://checkio.org"
         self.SEARCH_TEXT = "Python checkIO "
         self.driver = webdriver.Chrome(ChromeDriverManager().install())
-
 
     def main_logic(self):
         self.login_to_checkio()
@@ -41,11 +45,12 @@ class CheckIOSolver:
             self.solve_one_task(task)
 
     def solve_one_task(self, task):
-        print(task)
+        print('Solving current task: ', task.name)
         solution_links = self.get_google_solutions_for_task(task)
         for solution in solution_links:
             solution_code = self.copy_solution(solution)
-            self.solve_and_check_task(solution_code, task)
+            if self.solve_and_check_task(solution_code, task):
+                break
 
     def solve_and_check_task(self, solution_code, task_obj):
 
@@ -55,26 +60,43 @@ class CheckIOSolver:
         try:
             self.driver.find_element_by_xpath("//a[@class='btn']").click()
         except ElementClickInterceptedException:
-            print("--- Pop up Appeared ----")
             self.driver.find_element_by_xpath("//div[@class='congratulation__body__accept']").click()
-            print("--- Closed Popup ---")
             time.sleep(2)
             self.driver.find_element_by_xpath("//a[@class='btn']").click()
         time.sleep(2)
         solution_textarea_element = self.driver.find_element_by_xpath("//textarea")
         solution_textarea_element.send_keys(Keys.COMMAND + "a")
         solution_textarea_element.send_keys(Keys.DELETE)
-        solution_textarea_element.send_keys(solution_code)
-        print('debug')
 
+        for i in solution_code:
+            solution_textarea_element.send_keys(i)
+            solution_textarea_element.send_keys('\n')
+            solution_textarea_element.send_keys(Keys.HOME)
+        time.sleep(2)
 
+        self.driver.find_element_by_id('check-code-btnEl').click()
+        time.sleep(6)
+        success_element = self.driver.find_elements_by_xpath("//div[@class='animation-success']")
+        if len(success_element) > 0:
+            print("Completed Task -: " + task_obj.name)
+            return True
+        else:
+            print("Failed Task -: " + task_obj.name)
+            return False
 
     def copy_solution(self, solution_link):
         self.driver.get(solution_link)
         time.sleep(2)
-        solution_code = self.driver.find_element_by_xpath("//div[@class='publications__info__code']")
-        return solution_code.text
-
+        publications_code = self.driver.find_element_by_xpath("//div[@class='publications__info__code']")
+        solution_code = publications_code.find_elements_by_xpath("//span[@style='padding-right: 0.1px;']")
+        curr_google_solution_code = []
+        for data in solution_code:
+            code_words = data.find_elements_by_css_selector('span')
+            code_line = ""
+            for word in code_words:
+                code_line += word.text
+            if len(code_line) > 0: curr_google_solution_code.append(code_line)
+        return curr_google_solution_code
 
     def get_google_solutions_for_task(self, task):
         print("Google Search: Task - " + task.name + "\n")
@@ -92,7 +114,6 @@ class CheckIOSolver:
         time.sleep(3)
         return current_google_result_links
 
-
     def get_unsolved_tasks_from_island(self, link_to_island):
         self.driver.get(link_to_island)
         soup = BeautifulSoup(self.driver.page_source, 'html.parser')
@@ -109,12 +130,12 @@ class CheckIOSolver:
                 print(e)
         return unsolved_tasks
 
-
     def get_islands_links(self):
         opened_stations = self.driver.find_elements_by_xpath("//div[contains(@class,'map__station_state_opened')]")
         opened_stations_links = []
         for link in opened_stations:
-            opened_stations_links.append(link.find_element_by_css_selector('a.map__station__link').get_attribute("href"))
+            opened_stations_links.append(
+                link.find_element_by_css_selector('a.map__station__link').get_attribute("href"))
         return opened_stations_links
 
     def login_to_checkio(self):
