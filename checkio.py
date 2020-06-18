@@ -32,31 +32,57 @@ class CheckIOSolver:
         self.SEARCH_TEXT = "Python checkIO "
         self.driver = webdriver.Chrome(ChromeDriverManager().install())
 
-    def main_logic(self):
+    def try_code(self):
         self.login_to_checkio()
-        # links = self.get_islands_links()
         unsolved_island_tasks = self.get_unsolved_tasks_from_island('https://py.checkio.org/station/home/')
         self.solve_tasks_on_island(unsolved_island_tasks)
         time.sleep(3)
         self.driver.quit()
 
+    def main_logic(self):
+        # todo create fresh account
+        # todo get logs to file
+        for i in range(10):
+            self.single_iteration_over_session()
+
+    def single_iteration_over_session(self):
+        self.login_to_checkio()
+        links = self.get_islands_links()
+        self.iterate_over_islands_and_solve_tasks(links)
+        self.driver.quit()
+
+    def iterate_over_islands_and_solve_tasks(self, links_to_islands):
+        for island in links_to_islands:
+            unsolved_island_tasks = self.get_unsolved_tasks_from_island(island)
+            amount_of_unsolved_tasks = len(unsolved_island_tasks)
+            if amount_of_unsolved_tasks:
+                print("Tasks to solve: ", amount_of_unsolved_tasks)
+                self.solve_tasks_on_island(unsolved_island_tasks)
+            else:
+                print("No tasks to solve on ", island)
+            time.sleep(4)
+
     def solve_tasks_on_island(self, tasks_to_solve):
-        for task in tasks_to_solve[:1]:
-            self.solve_one_task(task)
+        for task in tasks_to_solve:
+            if self.solve_one_task(task):
+                print(task.name, 'solved')
+            else:
+                print(task.name, "can't be solved")
 
     def solve_one_task(self, task):
         print('Solving current task: ', task.name)
         solution_links = self.get_google_solutions_for_task(task)
+        task_solved = False
         for solution in solution_links:
             solution_code = self.copy_solution(solution)
-            if self.solve_and_check_task(solution_code, task):
+            if solution_code and self.solve_and_check_task(solution_code, task):
+                task_solved = True
                 break
+        return task_solved
 
     def solve_and_check_task(self, solution_code, task_obj):
-
         self.driver.get(f'{self.base_url}/{task_obj.link}')
         time.sleep(2)
-        print("Click on Solve It button")
         try:
             self.driver.find_element_by_xpath("//a[@class='btn']").click()
         except ElementClickInterceptedException:
@@ -67,7 +93,6 @@ class CheckIOSolver:
         solution_textarea_element = self.driver.find_element_by_xpath("//textarea")
         solution_textarea_element.send_keys(Keys.COMMAND + "a")
         solution_textarea_element.send_keys(Keys.DELETE)
-
         for i in solution_code:
             solution_textarea_element.send_keys(i)
             solution_textarea_element.send_keys('\n')
@@ -75,28 +100,35 @@ class CheckIOSolver:
         time.sleep(2)
 
         self.driver.find_element_by_id('check-code-btnEl').click()
-        time.sleep(6)
-        success_element = self.driver.find_elements_by_xpath("//div[@class='animation-success']")
-        if len(success_element) > 0:
-            print("Completed Task -: " + task_obj.name)
-            return True
-        else:
-            print("Failed Task -: " + task_obj.name)
-            return False
+        time.sleep(2)
+        print(f"Checking task...")
+        for current_attempt in range(20):
+            success_element = self.driver.find_elements_by_xpath("//div[@class='animation-success']")
+            if len(success_element) > 0:
+                print("Completed Task: " + task_obj.name)
+                return True
+            time.sleep(2)
+        print("Failed Task: " + task_obj.name)
+        return False
 
     def copy_solution(self, solution_link):
         self.driver.get(solution_link)
-        time.sleep(2)
-        publications_code = self.driver.find_element_by_xpath("//div[@class='publications__info__code']")
-        solution_code = publications_code.find_elements_by_xpath("//span[@style='padding-right: 0.1px;']")
-        curr_google_solution_code = []
-        for data in solution_code:
-            code_words = data.find_elements_by_css_selector('span')
-            code_line = ""
-            for word in code_words:
-                code_line += word.text
-            if len(code_line) > 0: curr_google_solution_code.append(code_line)
-        return curr_google_solution_code
+        time.sleep(3)
+        try:
+            publications_code = self.driver.find_element_by_xpath("//div[@class='publications__info__code']")
+            solution_code = publications_code.find_elements_by_xpath("//span[@style='padding-right: 0.1px;']")
+            curr_google_solution_code = []
+            for data in solution_code:
+                code_words = data.find_elements_by_css_selector('span')
+                code_line = ""
+                for word in code_words:
+                    code_line += word.text
+                if len(code_line) > 0: curr_google_solution_code.append(code_line)
+            return curr_google_solution_code
+        except Exception as e:
+            print(e)
+            print('Cant get solution from: ', solution_link)
+            return ''
 
     def get_google_solutions_for_task(self, task):
         print("Google Search: Task - " + task.name + "\n")
@@ -167,4 +199,4 @@ class CheckIOSolver:
 if __name__ == '__main__':
     credentials = read_credentials()
     bot = CheckIOSolver(credentials['username'], credentials['password'])
-    bot.main_logic()
+    bot.single_iteration_over_session()
