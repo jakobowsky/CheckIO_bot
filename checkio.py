@@ -133,7 +133,7 @@ class CheckIOSolver:
             return ''
 
     def get_google_solutions_for_task(self, task):
-        print("Google Search: Task - " + task.name + "\n")
+        print("Google Search: " + task.name + "\n")
         self.driver.get(self.google)
         time.sleep(2)
         searchbox = self.driver.find_element_by_name("q")
