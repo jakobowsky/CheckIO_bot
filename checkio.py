@@ -2,11 +2,10 @@ import json
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
-from selenium.webdriver.common.action_chains import ActionChains
 import time
+import sys
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
-import pyperclip
 from selenium.webdriver.common.keys import Keys
 
 
@@ -31,6 +30,7 @@ class CheckIOSolver:
         self.base_url = "https://checkio.org"
         self.SEARCH_TEXT = "Python checkIO "
         self.driver = webdriver.Chrome(ChromeDriverManager().install())
+        self.COMMAND_OR_CONTROL = Keys.COMMAND if sys.platform == 'darwin' else Keys.CONTROL
 
     def try_code(self):
         self.login_to_checkio()
@@ -42,7 +42,9 @@ class CheckIOSolver:
     def main_logic(self):
         # todo create fresh account
         # todo get logs to file
+        # todo run it in the cloud
         for i in range(10):
+            # every iteration may give you new islands and tasks unclocked
             self.single_iteration_over_session()
 
     def single_iteration_over_session(self):
@@ -91,7 +93,7 @@ class CheckIOSolver:
             self.driver.find_element_by_xpath("//a[@class='btn']").click()
         time.sleep(2)
         solution_textarea_element = self.driver.find_element_by_xpath("//textarea")
-        solution_textarea_element.send_keys(Keys.COMMAND + "a")
+        solution_textarea_element.send_keys(self.COMMAND_OR_CONTROL + "a")
         solution_textarea_element.send_keys(Keys.DELETE)
         for i in solution_code:
             solution_textarea_element.send_keys(i)
