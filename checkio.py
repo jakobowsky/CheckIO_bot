@@ -44,7 +44,7 @@ class CheckIOSolver:
         # todo get logs to file
         # todo run it in the cloud
         for i in range(10):
-            # every iteration may give you new islands and tasks unclocked
+            # every iteration may give you new islands and tasks unlocked
             self.single_iteration_over_session()
 
     def single_iteration_over_session(self):
@@ -83,7 +83,7 @@ class CheckIOSolver:
         return task_solved
 
     def solve_and_check_task(self, solution_code, task_obj):
-        self.driver.get(f'{self.base_url}/{task_obj.link}')
+        self.driver.get(f'{self.base_url}{task_obj.link}')
         time.sleep(2)
         try:
             self.driver.find_element_by_xpath("//a[@class='btn']").click()
