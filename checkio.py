@@ -40,7 +40,6 @@ class CheckIOSolver:
         self.driver.quit()
 
     def main_logic(self):
-        # todo create fresh account
         # todo get logs to file
         # todo run it in the cloud
         for i in range(10):
@@ -156,7 +155,7 @@ class CheckIOSolver:
         for task in tasks:
             try:
                 task_status = task.find(class_='island-tasks__side__sign').get('title')
-                if task_status != 'Solved':
+                if task_status != 'Solved' and task_status != 'Blocked':
                     title = task.find(class_='island-tasks__task__title').get('title')
                     link = task.find('a').get('href')
                     unsolved_tasks.append(Task(title, link))
